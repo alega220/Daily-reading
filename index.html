@@ -40,10 +40,14 @@ small,.mu{color:var(--mu);font-size:.85rem}
 .sh{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom,0px));animation:up .2s ease-out}
 .sh h3{margin:.1rem 0 1rem;font-size:1.2rem}
 @keyframes up{from{transform:translateY(40px);opacity:0}}
+.nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:8}
+.nav button{flex:1;background:none;color:var(--mu);border-radius:0;display:flex;flex-direction:column;align-items:center;gap:.05rem;font-size:.75rem;padding:.55rem 0}
+.nav button span{font-size:1.3rem}.nav button.on{color:var(--pr)}
 .empty{text-align:center;color:var(--mu);padding:2rem 1rem}
 </style></head><body>
 <header><b id="ttl">DC Rounds</b><span id="hb" style="display:flex;gap:.4rem"></span></header>
 <main id="app">Loading…</main>
+<nav class="nav" id="nav" style="display:none"></nav>
 <script>
 // ===== CONFIG =====
 const SB_URL='https://ucqkvmqyatsgaoorxwjb.supabase.co', SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjcWt2bXF5YXRzZ2Fvb3J4d2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3ODIwOTQsImV4cCI6MjEwOTM1ODA5NH0._1DKt6FzETBdsYalVkhr3M7VLN8FbakY0jwU-jxNFFw';
@@ -85,10 +89,10 @@ async function load(){
 }
 function head(){
   $('#hb').innerHTML=`<button onclick="setFs(-1)">A−</button><button onclick="setFs(1)">A+</button>`+
-  (isAdmin?`<button onclick="adminMode=!adminMode;adm={};home()">${adminMode?'Rounds':'Admin'}</button>`:'')+
   `<button onclick="sb.auth.signOut().then(()=>location.reload())">Out</button>`;
 }
 function loginView(){
+  $('#nav').style.display='none';
   $('#hb').innerHTML=`<button onclick="setFs(-1)">A−</button><button onclick="setFs(1)">A+</button>`;
   app.innerHTML=`<div class="card" style="margin-top:12vh"><h2>Sign in</h2><label>Email</label><input id="em" type="email" autocomplete="username"><label>Password</label><input id="pw" type="password" autocomplete="current-password"><button class="full" onclick="login()">Sign in</button><p id="err" style="color:var(--rd)"></p></div>`;
 }
@@ -97,10 +101,54 @@ async function login(){
   if(error) $('#err').textContent=error.message; else init();
 }
 
+/* ---------- NAV ---------- */
+function nav(t){
+  const n=$('#nav'); if(!t){n.style.display='none';return}
+  n.style.display='flex';
+  const tabs=[['rounds','📋','Rounds'],['history','🗂️','History']];
+  if(isAdmin)tabs.push(['admin','⚙️','Admin']);
+  n.innerHTML=tabs.map(([k,i,l])=>`<button class="${k===t?'on':''}" onclick="go('${k}')"><span>${i}</span>${l}</button>`).join('');
+}
+function go(k){adminMode=k==='admin';adm={};k==='history'?historyView():home()}
+const dayKey=t=>new Date(t).toLocaleDateString('en-CA');
+let H=[],lastWb=null;
+function mkbook(rows){const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Readings');XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.Alarm!=='Normal'||r.Notes)),'Alarms & Notes');return wb}
+
+/* ---------- HISTORY (last 30 days, one file per day per site) ---------- */
+async function historyView(){
+  head(); nav('history'); $('#ttl').textContent='History';
+  app.innerHTML='<div class="empty">Loading…</div>';
+  const since=new Date(Date.now()-30*864e5).toISOString();
+  const {data,error}=await sb.from('rounds').select('id,site_id,user_email,finished_at').eq('status','done').gte('finished_at',since).order('finished_at',{ascending:false});
+  if(error) return app.innerHTML=`<div class="empty">${esc(error.message)}</div>`;
+  H=data||[];
+  const g={};H.forEach(r=>{const d=dayKey(r.finished_at),k=d+'|'+r.site_id;(g[k]=g[k]||{d,site:r.site_id,n:0}).n++});
+  const list=Object.values(g), days=[...new Set(list.map(x=>x.d))].sort().reverse();
+  app.innerHTML='<small>Last 30 days · one Excel file per day for each site</small><br><br>'+(days.length?days.map(d=>
+    `<h2 style="font-size:1rem;margin-top:1rem">${new Date(d+'T00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</h2>`+
+    list.filter(x=>x.d===d).map(x=>{const s=S.sites.find(z=>z.id===x.site);return `<div class="card"><div class="top" style="margin:0"><span><b>${esc(s?.name||'Site')}</b><br><small>${x.n} round${x.n>1?'s':''}</small></span><button class="sm" onclick="dl('${d}','${x.site}',this)">⬇ Excel</button></div></div>`}).join('')
+  ).join(''):'<div class="empty">No finished rounds in the last 30 days.</div>');
+}
+async function dl(d,sid,btn){
+  btn.disabled=true;btn.textContent='…';
+  const rs=H.filter(r=>r.site_id===sid&&dayKey(r.finished_at)===d);
+  const {data:rd,error}=await sb.from('readings').select('*').in('round_id',rs.map(r=>r.id));
+  btn.disabled=false;btn.textContent='⬇ Excel';
+  if(error) return alert(error.message);
+  const s=S.sites.find(x=>x.id===sid), rows=[];
+  rs.slice().reverse().forEach(r=>(rd||[]).filter(x=>x.round_id===r.id).forEach(x=>{
+    const p=S.panels.find(y=>y.id===x.panel_id); if(!p) return;
+    const rm=S.rooms.find(y=>y.id===p.room_id);
+    p.fields.forEach(f=>rows.push({Date:d,Round:new Date(r.finished_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),Technician:r.user_email,Site:s?.name,Room:rm?.name,Panel:p.name,Parameter:f,Value:x.vals?.[f],Alarm:x.alarm,Notes:x.notes||''}));
+  }));
+  XLSX.writeFile(mkbook(rows),`${s?.name||'site'}_${d}.xlsx`);
+}
+
 /* ---------- HOME ---------- */
 async function home(){
   head(); $('#ttl').textContent='DC Rounds';
-  if(adminMode) return adminView();
+  if(adminMode){nav('admin');return adminView()}
+  nav('rounds');
   const {data:last}=await sb.from('rounds').select('site_id,finished_at').eq('status','done').order('finished_at',{ascending:false});
   const {data:open}=await sb.from('rounds').select('*').eq('status','open').eq('user_id',me.id);
   app.innerHTML='<h2>Choose a site</h2>'+(S.sites.length?S.sites.map(s=>{
@@ -119,7 +167,7 @@ async function openRound(id){
 
 /* ---------- ROUND ---------- */
 async function roundView(){
-  $('#ttl').textContent=site.name;
+  nav(null); $('#ttl').textContent=site.name;
   const rooms=S.rooms.filter(r=>r.site_id===site.id&&S.panels.some(p=>p.room_id===r.id));
   const {data:rd}=await sb.from('readings').select('panel_id').eq('round_id',round.id);
   const got=new Set((rd||[]).map(x=>x.panel_id));
@@ -134,7 +182,7 @@ async function roomView(id){
   const room=S.rooms.find(r=>r.id===id), panels=S.panels.filter(p=>p.room_id===id);
   const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
   const by={};(rd||[]).forEach(x=>by[x.panel_id]=x);
-  $('#ttl').textContent=room.name;
+  nav(null); $('#ttl').textContent=room.name;
   app.innerHTML=`<div class="top"><button class="g sm" onclick="roundView()">← Rooms</button></div>`+panels.map(p=>{
     const e=by[p.id]||{vals:{}}, al=e.alarm&&e.alarm!=='Normal';
     return `<div class="card ${al?'alarm':''}" data-p="${p.id}"><h2 style="margin-top:0">${esc(p.name)}</h2><div class="fields">`+
@@ -158,18 +206,17 @@ async function saveRoom(){
 
 /* ---------- FINISH ---------- */
 async function finish(){
-  app.innerHTML='<div class="empty">Building report…</div>';
+  nav(null); app.innerHTML='<div class="empty">Building report…</div>';
   const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
   const rows=[];
   S.rooms.filter(r=>r.site_id===site.id).forEach(r=>S.panels.filter(p=>p.room_id===r.id).forEach(p=>{
     const x=(rd||[]).find(y=>y.panel_id===p.id); if(!x) return;
     p.fields.forEach(f=>rows.push({Site:site.name,Room:r.name,Panel:p.name,Parameter:f,Value:x.vals?.[f],Alarm:x.alarm,Notes:x.notes||'',Time:new Date(x.taken_at).toLocaleString()}));
   }));
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Readings');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.Alarm!=='Normal'||r.Notes)),'Alarms & Notes');
+  const wb=mkbook(rows);
   const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
   const filename=`${site.name}_round_${stamp}.xlsx`;
+  lastWb={wb,filename};
   XLSX.writeFile(wb,filename);
   const file=XLSX.write(wb,{bookType:'xlsx',type:'base64'});
   let msg='Report downloaded.';
@@ -178,7 +225,7 @@ async function finish(){
     msg=error?'Report downloaded, but email failed: '+error.message:'Report emailed to '+site.email;
   }
   await sb.from('rounds').update({status:'done',finished_at:new Date().toISOString()}).eq('id',round.id);
-  app.innerHTML=`<div class="card" style="text-align:center;margin-top:10vh"><div style="font-size:3rem">✅</div><h2>Round complete</h2><p class="mu">${esc(msg)}</p><button class="full" onclick="home()">Done</button></div>`;
+  app.innerHTML=`<div class="card" style="text-align:center;margin-top:10vh"><div style="font-size:3rem">✅</div><h2>Round complete</h2><p class="mu">${esc(msg)}</p><button class="ok full" onclick="XLSX.writeFile(lastWb.wb,lastWb.filename)">⬇ Download Excel</button><br><br><div class="row2"><button class="g" onclick="go('history')">History</button><button onclick="home()">Done</button></div></div>`;
 }
 
 /* ---------- ADMIN ---------- */
