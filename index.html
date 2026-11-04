@@ -2,33 +2,74 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f2a4a">
 <title>DC Rounds</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:#f3f5f8;color:#1b2430}
-header{background:#12304f;color:#fff;padding:12px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:0}
-header b{flex:1}main{max-width:640px;margin:auto;padding:14px}
-.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
-button{font:inherit;padding:10px 14px;border:0;border-radius:8px;background:#1d6fb8;color:#fff;cursor:pointer}
-button.g{background:#e3e8ee;color:#1b2430}button.r{background:#c0392b}button.ok{background:#1e8e4e}
-input,select,textarea{font:inherit;width:100%;padding:10px;border:1px solid #c5ced8;border-radius:8px;margin:4px 0 10px}
-label{font-size:13px;color:#51606f}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>button{flex:none}
-.room{display:flex;justify-content:space-between;align-items:center;padding:14px;margin-bottom:8px;background:#fff;border-radius:10px;border-left:6px solid #c5ced8;cursor:pointer}
-.room.done{border-color:#1e8e4e}.warn{background:#fff3cd;padding:10px;border-radius:8px;margin-bottom:12px}
-.alarm{border-left:4px solid #c0392b}small{color:#51606f}
+:root{--bg:#f3f6fb;--card:#fff;--tx:#14202e;--mu:#667585;--bd:#e2e8f0;--pr:#2563eb;--ok:#16a34a;--rd:#dc2626;--hd:#0f2a4a;--in:#f8fafc;--sh:0 1px 2px #0000000f,0 6px 18px #0000000d}
+@media(prefers-color-scheme:dark){:root{--bg:#0c1522;--card:#152234;--tx:#e8eef6;--mu:#94a3b8;--bd:#24354b;--pr:#3b82f6;--hd:#09111c;--in:#0f1b2b;--sh:0 1px 2px #0006}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:18px}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);line-height:1.4}
+header{background:var(--hd);color:#fff;padding:.7rem 1rem;display:flex;gap:.5rem;align-items:center;position:sticky;top:0;z-index:5;padding-top:calc(.7rem + env(safe-area-inset-top,0px))}
+header b{flex:1;font-size:1.1rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:#ffffff22;color:#fff;padding:.4rem .7rem;font-size:.85rem}
+main{max-width:680px;margin:auto;padding:1rem 1rem 5rem}
+h2{font-size:1.25rem;margin:.4rem 0 .8rem}
+.card{background:var(--card);border-radius:16px;padding:1rem;margin-bottom:.9rem;box-shadow:var(--sh);border:1px solid var(--bd)}
+button{font:inherit;font-weight:600;font-size:.95rem;padding:.75rem 1.1rem;border:0;border-radius:12px;background:var(--pr);color:#fff;cursor:pointer;transition:transform .08s,opacity .15s}
+button:active{transform:scale(.97)}button.g{background:var(--in);color:var(--tx);border:1px solid var(--bd)}
+button.r{background:var(--rd)}button.ok{background:var(--ok)}button.sm{padding:.45rem .8rem;font-size:.85rem}button.full{width:100%}
+input,select,textarea{font:inherit;font-size:1rem;width:100%;padding:.75rem .85rem;border:1.5px solid var(--bd);border-radius:12px;margin:.25rem 0 .8rem;background:var(--in);color:var(--tx)}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--pr);box-shadow:0 0 0 3px #2563eb33}
+label{font-size:.8rem;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.03em}
+.item{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:1rem;margin-bottom:.6rem;background:var(--card);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh);cursor:pointer}
+.item.done{border-left:6px solid var(--ok)}.item small{display:block}
+.item .ch{color:var(--mu);font-size:1.4rem;line-height:1}
+small,.mu{color:var(--mu);font-size:.85rem}
+.chip{display:inline-block;padding:.15rem .65rem;border-radius:99px;font-size:.78rem;font-weight:650}
+.c-due{background:#fef3c7;color:#92400e}.c-ok{background:#dcfce7;color:#166534}.c-al{background:#fee2e2;color:#991b1b}
+.row2{display:flex;gap:.6rem}.row2>button{flex:1}
+.top{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.8rem}
+.prog{height:8px;background:var(--bd);border-radius:9px;overflow:hidden;margin:.3rem 0 1rem}.prog i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0 .7rem}
+.card.alarm{border-color:var(--rd);box-shadow:0 0 0 2px #dc262633}
+.bottom{position:sticky;bottom:0;padding:.8rem 0;background:linear-gradient(#0000,var(--bg) 35%)}
+.ov{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sh{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom,0px));animation:up .2s ease-out}
+.sh h3{margin:.1rem 0 1rem;font-size:1.2rem}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.empty{text-align:center;color:var(--mu);padding:2rem 1rem}
 </style></head><body>
-<header><b id="ttl">DC Rounds</b><span id="hb"></span></header>
+<header><b id="ttl">DC Rounds</b><span id="hb" style="display:flex;gap:.4rem"></span></header>
 <main id="app">Loading…</main>
 <script>
-// ===== CONFIG: paste your Supabase values =====
+// ===== CONFIG =====
 const SB_URL='https://ucqkvmqyatsgaoorxwjb.supabase.co', SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjcWt2bXF5YXRzZ2Fvb3J4d2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3ODIwOTQsImV4cCI6MjEwOTM1ODA5NH0._1DKt6FzETBdsYalVkhr3M7VLN8FbakY0jwU-jxNFFw';
 const ROUND_HOURS=2;
-// ==============================================
+// ==================
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const $=s=>document.querySelector(s), app=$('#app');
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let me=null,isAdmin=false,adminMode=false,S={sites:[],rooms:[],panels:[]},site=null,round=null,adm={};
+
+/* text size */
+let fs=18;try{fs=+localStorage.getItem('fs')||18}catch(e){}
+function setFs(d){fs=Math.min(24,Math.max(14,fs+d));document.documentElement.style.fontSize=fs+'px';try{localStorage.setItem('fs',fs)}catch(e){}}
+setFs(0);
+
+/* bottom sheet form */
+function sheet(title,body,ok){
+  const d=document.createElement('div');d.className='ov';
+  d.innerHTML=`<div class="sh"><h3>${title}</h3>${body}<div class="row2"><button class="g" id="x">Cancel</button><button id="o">Save</button></div></div>`;
+  document.body.appendChild(d);
+  d.querySelector('#x').onclick=()=>d.remove();
+  d.onclick=e=>{if(e.target===d)d.remove()};
+  d.querySelector('#o').onclick=async()=>{if(await ok(d)!==false)d.remove()};
+  const f=d.querySelector('input');if(f)f.focus();
+}
+const val=(d,n)=>d.querySelector(`[name=${n}]`).value.trim();
 
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
@@ -43,11 +84,13 @@ async function load(){
   S={sites:s.data||[],rooms:r.data||[],panels:p.data||[]};
 }
 function head(){
-  $('#hb').innerHTML=(isAdmin?`<button class="g" onclick="adminMode=!adminMode;adm={};home()">${adminMode?'Rounds':'Admin'}</button> `:'')+`<button class="g" onclick="sb.auth.signOut().then(()=>location.reload())">Out</button>`;
+  $('#hb').innerHTML=`<button onclick="setFs(-1)">A−</button><button onclick="setFs(1)">A+</button>`+
+  (isAdmin?`<button onclick="adminMode=!adminMode;adm={};home()">${adminMode?'Rounds':'Admin'}</button>`:'')+
+  `<button onclick="sb.auth.signOut().then(()=>location.reload())">Out</button>`;
 }
 function loginView(){
-  $('#hb').innerHTML='';
-  app.innerHTML=`<div class="card"><h3>Sign in</h3><label>Email</label><input id="em" type="email"><label>Password</label><input id="pw" type="password"><button onclick="login()">Sign in</button><p id="err" style="color:#c0392b"></p></div>`;
+  $('#hb').innerHTML=`<button onclick="setFs(-1)">A−</button><button onclick="setFs(1)">A+</button>`;
+  app.innerHTML=`<div class="card" style="margin-top:12vh"><h2>Sign in</h2><label>Email</label><input id="em" type="email" autocomplete="username"><label>Password</label><input id="pw" type="password" autocomplete="current-password"><button class="full" onclick="login()">Sign in</button><p id="err" style="color:var(--rd)"></p></div>`;
 }
 async function login(){
   const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});
@@ -60,13 +103,12 @@ async function home(){
   if(adminMode) return adminView();
   const {data:last}=await sb.from('rounds').select('site_id,finished_at').eq('status','done').order('finished_at',{ascending:false});
   const {data:open}=await sb.from('rounds').select('*').eq('status','open').eq('user_id',me.id);
-  app.innerHTML='<h3>Choose site</h3>'+(S.sites.length?S.sites.map(s=>{
+  app.innerHTML='<h2>Choose a site</h2>'+(S.sites.length?S.sites.map(s=>{
     const l=(last||[]).find(x=>x.site_id===s.id), o=(open||[]).find(x=>x.site_id===s.id);
-    const age=l?(Date.now()-new Date(l.finished_at))/36e5:null;
-    const due=age===null||age>=ROUND_HOURS;
-    return `<div class="card"><b>${esc(s.name)}</b><br><small>Last round: ${l?new Date(l.finished_at).toLocaleString():'none yet'}</small>
-    ${due?`<div class="warn">Round due</div>`:''}
-    <button onclick="openRound('${s.id}')">${o?'Resume round':'Start round'}</button></div>`}).join(''):'<div class="card">No sites yet. Ask the admin to add one.</div>');
+    const age=l?(Date.now()-new Date(l.finished_at))/36e5:null, due=age===null||age>=ROUND_HOURS;
+    return `<div class="card"><div class="top"><b style="font-size:1.1rem">${esc(s.name)}</b><span class="chip ${due?'c-due':'c-ok'}">${due?'Round due':'Up to date'}</span></div>
+    <small>Last round: ${l?new Date(l.finished_at).toLocaleString():'none yet'}</small><br><br>
+    <button class="full" onclick="openRound('${s.id}')">${o?'Resume round':'Start round'}</button></div>`}).join(''):'<div class="empty">No sites yet.<br>Ask the admin to add one.</div>');
 }
 async function openRound(id){
   site=S.sites.find(s=>s.id===id);
@@ -81,24 +123,25 @@ async function roundView(){
   const rooms=S.rooms.filter(r=>r.site_id===site.id&&S.panels.some(p=>p.room_id===r.id));
   const {data:rd}=await sb.from('readings').select('panel_id').eq('round_id',round.id);
   const got=new Set((rd||[]).map(x=>x.panel_id));
-  const isDone=r=>S.panels.filter(p=>p.room_id===r.id).every(p=>got.has(p.id));
-  const all=rooms.length&&rooms.every(isDone);
-  app.innerHTML=`<button class="g" onclick="home()">← Sites</button><h3>Rooms (${rooms.filter(isDone).length}/${rooms.length})</h3>`+
-   rooms.map(r=>`<div class="room ${isDone(r)?'done':''}" onclick="roomView('${r.id}')"><span>${esc(r.name)}</span><span>${isDone(r)?'✓':'›'}</span></div>`).join('')+
-   (all?`<button class="ok" style="width:100%" onclick="finish()">Finish round & send report</button>`:'<small>Complete all rooms to finish.</small>');
+  const pn=r=>S.panels.filter(p=>p.room_id===r.id), isDone=r=>pn(r).every(p=>got.has(p.id));
+  const n=rooms.filter(isDone).length, all=rooms.length&&n===rooms.length;
+  app.innerHTML=`<div class="top"><button class="g sm" onclick="home()">← Sites</button><small>${n} of ${rooms.length} rooms</small></div>
+  <div class="prog"><i style="width:${rooms.length?n/rooms.length*100:0}%"></i></div>`+
+  (rooms.length?rooms.map(r=>`<div class="item ${isDone(r)?'done':''}" onclick="roomView('${r.id}')"><span><b>${esc(r.name)}</b><small>${pn(r).filter(p=>got.has(p.id)).length}/${pn(r).length} panels</small></span><span class="ch">${isDone(r)?'✓':'›'}</span></div>`).join(''):'<div class="empty">This site has no rooms with panels yet.</div>')+
+  (all?`<div class="bottom"><button class="ok full" onclick="finish()">Finish round & send report</button></div>`:'');
 }
 async function roomView(id){
   const room=S.rooms.find(r=>r.id===id), panels=S.panels.filter(p=>p.room_id===id);
   const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
   const by={};(rd||[]).forEach(x=>by[x.panel_id]=x);
   $('#ttl').textContent=room.name;
-  app.innerHTML=`<button class="g" onclick="roundView()">← Rooms</button>`+panels.map(p=>{
-    const e=by[p.id]||{vals:{}};
-    return `<div class="card" data-p="${p.id}"><b>${esc(p.name)}</b>`+
-    p.fields.map(f=>`<label>${esc(f)}</label><input type="number" step="any" inputmode="decimal" data-f="${esc(f)}" value="${esc(e.vals?.[f])}">`).join('')+
-    `<label>Alarm</label><select class="al"><option>Normal</option><option ${e.alarm&&e.alarm!=='Normal'?'selected':''}>Alarm</option></select>
-     <label>Notes</label><textarea class="nt" rows="2">${esc(e.notes)}</textarea></div>`}).join('')+
-    `<button class="ok" style="width:100%" onclick="saveRoom()">Save room</button>`;
+  app.innerHTML=`<div class="top"><button class="g sm" onclick="roundView()">← Rooms</button></div>`+panels.map(p=>{
+    const e=by[p.id]||{vals:{}}, al=e.alarm&&e.alarm!=='Normal';
+    return `<div class="card ${al?'alarm':''}" data-p="${p.id}"><h2 style="margin-top:0">${esc(p.name)}</h2><div class="fields">`+
+    p.fields.map(f=>`<div><label>${esc(f)}</label><input type="number" step="any" inputmode="decimal" data-f="${esc(f)}" value="${esc(e.vals?.[f])}"></div>`).join('')+
+    `</div><label>Status</label><select class="al" onchange="this.closest('.card').classList.toggle('alarm',this.value==='Alarm')"><option>Normal</option><option ${al?'selected':''}>Alarm</option></select>
+     <label>Notes</label><textarea class="nt" rows="2" placeholder="Optional">${esc(e.notes)}</textarea></div>`}).join('')+
+    `<div class="bottom"><button class="ok full" onclick="saveRoom()">Save room</button></div>`;
 }
 async function saveRoom(){
   const rows=[];
@@ -113,9 +156,9 @@ async function saveRoom(){
   roundView();
 }
 
-/* ---------- FINISH: Excel + email ---------- */
+/* ---------- FINISH ---------- */
 async function finish(){
-  app.innerHTML='<div class="card">Building report…</div>';
+  app.innerHTML='<div class="empty">Building report…</div>';
   const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
   const rows=[];
   S.rooms.filter(r=>r.site_id===site.id).forEach(r=>S.panels.filter(p=>p.room_id===r.id).forEach(p=>{
@@ -135,33 +178,36 @@ async function finish(){
     msg=error?'Report downloaded, but email failed: '+error.message:'Report emailed to '+site.email;
   }
   await sb.from('rounds').update({status:'done',finished_at:new Date().toISOString()}).eq('id',round.id);
-  app.innerHTML=`<div class="card"><h3>Round complete ✓</h3><p>${esc(msg)}</p><button onclick="home()">Done</button></div>`;
+  app.innerHTML=`<div class="card" style="text-align:center;margin-top:10vh"><div style="font-size:3rem">✅</div><h2>Round complete</h2><p class="mu">${esc(msg)}</p><button class="full" onclick="home()">Done</button></div>`;
 }
 
 /* ---------- ADMIN ---------- */
 function adminView(){
   $('#ttl').textContent='Admin';
   if(!adm.site){
-    app.innerHTML=`<h3>Sites</h3>`+S.sites.map(s=>`<div class="room" onclick="adm={site:'${s.id}'};adminView()"><span>${esc(s.name)}<br><small>${esc(s.email||'no email')}</small></span><span>›</span></div>`).join('')+
-    `<div class="card"><label>New site name</label><input id="n"><label>Report email(s), comma separated</label><input id="e" type="email" multiple><button onclick="add('sites',{name:n.value,email:e.value})">Add site</button></div>`;
+    app.innerHTML=`<div class="top"><h2 style="margin:0">Sites</h2><button onclick="addSite()">+ Add site</button></div>`+
+    (S.sites.length?S.sites.map(s=>`<div class="item" onclick="adm={site:'${s.id}'};adminView()"><span><b>${esc(s.name)}</b><small>${S.rooms.filter(r=>r.site_id===s.id).length} rooms · ${esc(s.email||'no report email')}</small></span><span class="ch">›</span></div>`).join(''):'<div class="empty">No sites yet. Tap “+ Add site”.</div>');
   } else if(!adm.room){
     const s=S.sites.find(x=>x.id===adm.site);
-    app.innerHTML=`<button class="g" onclick="adm={};adminView()">← Sites</button><h3>${esc(s.name)}</h3>
-    <div class="card"><label>Report email(s)</label><input id="e" value="${esc(s.email)}"><button onclick="upd('sites','${s.id}',{email:e.value})">Save emails</button> <button class="r" onclick="del('sites','${s.id}')">Delete site</button></div><h3>Rooms</h3>`+
-    S.rooms.filter(r=>r.site_id===s.id).map(r=>`<div class="room" onclick="adm.room='${r.id}';adminView()"><span>${esc(r.name)}</span><span>›</span></div>`).join('')+
-    `<div class="card"><label>New room (e.g. Utility A)</label><input id="n"><button onclick="add('rooms',{site_id:'${s.id}',name:n.value})">Add room</button></div>`;
+    app.innerHTML=`<div class="top"><button class="g sm" onclick="adm={};adminView()">← Sites</button><button class="g sm" onclick="editSite('${s.id}')">Edit site</button></div>
+    <div class="top"><h2 style="margin:0">${esc(s.name)}</h2><button onclick="addRoom('${s.id}')">+ Add room</button></div><small>Report email: ${esc(s.email||'none')}</small><br><br>`+
+    (S.rooms.filter(r=>r.site_id===s.id).map(r=>`<div class="item" onclick="adm.room='${r.id}';adminView()"><span><b>${esc(r.name)}</b><small>${S.panels.filter(p=>p.room_id===r.id).length} panels</small></span><span class="ch">›</span></div>`).join('')||'<div class="empty">No rooms yet. Tap “+ Add room”.</div>');
   } else {
     const r=S.rooms.find(x=>x.id===adm.room);
-    app.innerHTML=`<button class="g" onclick="adm.room=null;adminView()">← Rooms</button><h3>${esc(r.name)}</h3>`+
-    S.panels.filter(p=>p.room_id===r.id).map(p=>`<div class="card"><b>${esc(p.name)}</b><br><small>${esc(p.fields.join(' · '))}</small><br><br><button class="r" onclick="del('panels','${p.id}')">Delete</button></div>`).join('')+
-    `<div class="card"><label>New panel (e.g. MDB A)</label><input id="n"><label>Readings, comma separated</label><input id="f" value="Voltage (V), Current (A), Power (kW)"><button onclick="addPanel('${r.id}')">Add panel</button></div>
-    <button class="r" onclick="del('rooms','${r.id}')">Delete room</button>`;
+    app.innerHTML=`<div class="top"><button class="g sm" onclick="adm.room=null;adminView()">← Rooms</button><button class="r sm" onclick="del('rooms','${r.id}')">Delete room</button></div>
+    <div class="top"><h2 style="margin:0">${esc(r.name)}</h2><button onclick="addPanel('${r.id}')">+ Add panel</button></div>`+
+    (S.panels.filter(p=>p.room_id===r.id).map(p=>`<div class="card"><div class="top" style="margin:0"><span><b>${esc(p.name)}</b><br><small>${esc(p.fields.join(' · '))}</small></span><button class="r sm" onclick="del('panels','${p.id}')">Delete</button></div></div>`).join('')||'<div class="empty">No panels yet. Tap “+ Add panel”.</div>');
   }
 }
-async function add(t,o){if(!o.name.trim())return;const {error}=await sb.from(t).insert(o);if(error)alert(error.message);await load();adminView()}
-async function upd(t,id,o){const {error}=await sb.from(t).update(o).eq('id',id);alert(error?error.message:'Saved');await load()}
-async function del(t,id){if(!confirm('Delete? This also removes related data.'))return;await sb.from(t).delete().eq('id',id);if(t==='sites')adm={};if(t==='rooms')adm.room=null;await load();adminView()}
-function addPanel(room_id){const fields=$('#f').value.split(',').map(s=>s.trim()).filter(Boolean);add('panels',{room_id,name:$('#n').value,fields})}
+async function ins(t,o){const {error}=await sb.from(t).insert(o);if(error){alert(error.message);return false}await load();adminView()}
+function addSite(){sheet('New site',`<label>Site name</label><input name="n" placeholder="e.g. Smouha DC"><label>Report email(s)</label><input name="e" placeholder="a@x.com, b@x.com">`,
+  d=>val(d,'n')?ins('sites',{name:val(d,'n'),email:val(d,'e')||null}):false)}
+function editSite(id){const s=S.sites.find(x=>x.id===id);sheet('Edit site',`<label>Site name</label><input name="n" value="${esc(s.name)}"><label>Report email(s)</label><input name="e" value="${esc(s.email)}">`,
+  async d=>{const {error}=await sb.from('sites').update({name:val(d,'n')||s.name,email:val(d,'e')||null}).eq('id',id);if(error){alert(error.message);return false}await load();adminView()})}
+function addRoom(site_id){sheet('New room',`<label>Room name</label><input name="n" placeholder="e.g. Utility A">`,d=>val(d,'n')?ins('rooms',{site_id,name:val(d,'n')}):false)}
+function addPanel(room_id){sheet('New panel',`<label>Panel name</label><input name="n" placeholder="e.g. MDB A"><label>Readings (comma separated)</label><input name="f" value="Voltage (V), Current (A), Power (kW)">`,
+  d=>{const fields=val(d,'f').split(',').map(s=>s.trim()).filter(Boolean);return val(d,'n')&&fields.length?ins('panels',{room_id,name:val(d,'n'),fields}):false})}
+async function del(t,id){if(!confirm('Delete? This also removes related data.'))return;await sb.from(t).delete().eq('id',id);if(t==='rooms')adm.room=null;await load();adminView()}
 
 init();
 </script></body></html>
