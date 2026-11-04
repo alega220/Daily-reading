@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DC Rounds</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:#f3f5f8;color:#1b2430}
+header{background:#12304f;color:#fff;padding:12px 16px;display:flex;gap:8px;align-items:center;position:sticky;top:0}
+header b{flex:1}main{max-width:640px;margin:auto;padding:14px}
+.card{background:#fff;border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0002}
+button{font:inherit;padding:10px 14px;border:0;border-radius:8px;background:#1d6fb8;color:#fff;cursor:pointer}
+button.g{background:#e3e8ee;color:#1b2430}button.r{background:#c0392b}button.ok{background:#1e8e4e}
+input,select,textarea{font:inherit;width:100%;padding:10px;border:1px solid #c5ced8;border-radius:8px;margin:4px 0 10px}
+label{font-size:13px;color:#51606f}.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.row>button{flex:none}
+.room{display:flex;justify-content:space-between;align-items:center;padding:14px;margin-bottom:8px;background:#fff;border-radius:10px;border-left:6px solid #c5ced8;cursor:pointer}
+.room.done{border-color:#1e8e4e}.warn{background:#fff3cd;padding:10px;border-radius:8px;margin-bottom:12px}
+.alarm{border-left:4px solid #c0392b}small{color:#51606f}
+</style></head><body>
+<header><b id="ttl">DC Rounds</b><span id="hb"></span></header>
+<main id="app">Loading…</main>
+<script>
+// ===== CONFIG: paste your Supabase values =====
+const SB_URL='https://ucqkvmqyatsgaoorxwjb.supabase.co/rest/v1/', SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjcWt2bXF5YXRzZ2Fvb3J4d2piIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM3ODIwOTQsImV4cCI6MjEwOTM1ODA5NH0._1DKt6FzETBdsYalVkhr3M7VLN8FbakY0jwU-jxNFFw';
+const ROUND_HOURS=2;
+// ==============================================
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=s=>document.querySelector(s), app=$('#app');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let me=null,isAdmin=false,adminMode=false,S={sites:[],rooms:[],panels:[]},site=null,round=null,adm={};
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session) return loginView();
+  me=session.user;
+  const {data:p}=await sb.from('profiles').select('role').eq('id',me.id).maybeSingle();
+  isAdmin=p?.role==='admin';
+  await load(); home();
+}
+async function load(){
+  const [s,r,p]=await Promise.all([sb.from('sites').select('*').order('name'),sb.from('rooms').select('*').order('name'),sb.from('panels').select('*').order('name')]);
+  S={sites:s.data||[],rooms:r.data||[],panels:p.data||[]};
+}
+function head(){
+  $('#hb').innerHTML=(isAdmin?`<button class="g" onclick="adminMode=!adminMode;adm={};home()">${adminMode?'Rounds':'Admin'}</button> `:'')+`<button class="g" onclick="sb.auth.signOut().then(()=>location.reload())">Out</button>`;
+}
+function loginView(){
+  $('#hb').innerHTML='';
+  app.innerHTML=`<div class="card"><h3>Sign in</h3><label>Email</label><input id="em" type="email"><label>Password</label><input id="pw" type="password"><button onclick="login()">Sign in</button><p id="err" style="color:#c0392b"></p></div>`;
+}
+async function login(){
+  const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});
+  if(error) $('#err').textContent=error.message; else init();
+}
+
+/* ---------- HOME ---------- */
+async function home(){
+  head(); $('#ttl').textContent='DC Rounds';
+  if(adminMode) return adminView();
+  const {data:last}=await sb.from('rounds').select('site_id,finished_at').eq('status','done').order('finished_at',{ascending:false});
+  const {data:open}=await sb.from('rounds').select('*').eq('status','open').eq('user_id',me.id);
+  app.innerHTML='<h3>Choose site</h3>'+(S.sites.length?S.sites.map(s=>{
+    const l=(last||[]).find(x=>x.site_id===s.id), o=(open||[]).find(x=>x.site_id===s.id);
+    const age=l?(Date.now()-new Date(l.finished_at))/36e5:null;
+    const due=age===null||age>=ROUND_HOURS;
+    return `<div class="card"><b>${esc(s.name)}</b><br><small>Last round: ${l?new Date(l.finished_at).toLocaleString():'none yet'}</small>
+    ${due?`<div class="warn">Round due</div>`:''}
+    <button onclick="openRound('${s.id}')">${o?'Resume round':'Start round'}</button></div>`}).join(''):'<div class="card">No sites yet. Ask the admin to add one.</div>');
+}
+async function openRound(id){
+  site=S.sites.find(s=>s.id===id);
+  let {data:r}=await sb.from('rounds').select('*').eq('site_id',id).eq('status','open').eq('user_id',me.id).maybeSingle();
+  if(!r){const x=await sb.from('rounds').insert({site_id:id,user_email:me.email}).select().single();r=x.data}
+  round=r; roundView();
+}
+
+/* ---------- ROUND ---------- */
+async function roundView(){
+  $('#ttl').textContent=site.name;
+  const rooms=S.rooms.filter(r=>r.site_id===site.id&&S.panels.some(p=>p.room_id===r.id));
+  const {data:rd}=await sb.from('readings').select('panel_id').eq('round_id',round.id);
+  const got=new Set((rd||[]).map(x=>x.panel_id));
+  const isDone=r=>S.panels.filter(p=>p.room_id===r.id).every(p=>got.has(p.id));
+  const all=rooms.length&&rooms.every(isDone);
+  app.innerHTML=`<button class="g" onclick="home()">← Sites</button><h3>Rooms (${rooms.filter(isDone).length}/${rooms.length})</h3>`+
+   rooms.map(r=>`<div class="room ${isDone(r)?'done':''}" onclick="roomView('${r.id}')"><span>${esc(r.name)}</span><span>${isDone(r)?'✓':'›'}</span></div>`).join('')+
+   (all?`<button class="ok" style="width:100%" onclick="finish()">Finish round & send report</button>`:'<small>Complete all rooms to finish.</small>');
+}
+async function roomView(id){
+  const room=S.rooms.find(r=>r.id===id), panels=S.panels.filter(p=>p.room_id===id);
+  const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
+  const by={};(rd||[]).forEach(x=>by[x.panel_id]=x);
+  $('#ttl').textContent=room.name;
+  app.innerHTML=`<button class="g" onclick="roundView()">← Rooms</button>`+panels.map(p=>{
+    const e=by[p.id]||{vals:{}};
+    return `<div class="card" data-p="${p.id}"><b>${esc(p.name)}</b>`+
+    p.fields.map(f=>`<label>${esc(f)}</label><input type="number" step="any" inputmode="decimal" data-f="${esc(f)}" value="${esc(e.vals?.[f])}">`).join('')+
+    `<label>Alarm</label><select class="al"><option>Normal</option><option ${e.alarm&&e.alarm!=='Normal'?'selected':''}>Alarm</option></select>
+     <label>Notes</label><textarea class="nt" rows="2">${esc(e.notes)}</textarea></div>`}).join('')+
+    `<button class="ok" style="width:100%" onclick="saveRoom()">Save room</button>`;
+}
+async function saveRoom(){
+  const rows=[];
+  for(const c of document.querySelectorAll('[data-p]')){
+    const vals={};let miss=false;
+    c.querySelectorAll('[data-f]').forEach(i=>{if(i.value==='')miss=true;vals[i.dataset.f]=i.value===''?null:Number(i.value)});
+    if(miss){alert('Fill all readings for every panel.');return}
+    rows.push({round_id:round.id,panel_id:c.dataset.p,vals,alarm:c.querySelector('.al').value,notes:c.querySelector('.nt').value,taken_at:new Date().toISOString()});
+  }
+  const {error}=await sb.from('readings').upsert(rows,{onConflict:'round_id,panel_id'});
+  if(error) return alert(error.message);
+  roundView();
+}
+
+/* ---------- FINISH: Excel + email ---------- */
+async function finish(){
+  app.innerHTML='<div class="card">Building report…</div>';
+  const {data:rd}=await sb.from('readings').select('*').eq('round_id',round.id);
+  const rows=[];
+  S.rooms.filter(r=>r.site_id===site.id).forEach(r=>S.panels.filter(p=>p.room_id===r.id).forEach(p=>{
+    const x=(rd||[]).find(y=>y.panel_id===p.id); if(!x) return;
+    p.fields.forEach(f=>rows.push({Site:site.name,Room:r.name,Panel:p.name,Parameter:f,Value:x.vals?.[f],Alarm:x.alarm,Notes:x.notes||'',Time:new Date(x.taken_at).toLocaleString()}));
+  }));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Readings');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.filter(r=>r.Alarm!=='Normal'||r.Notes)),'Alarms & Notes');
+  const stamp=new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
+  const filename=`${site.name}_round_${stamp}.xlsx`;
+  XLSX.writeFile(wb,filename);
+  const file=XLSX.write(wb,{bookType:'xlsx',type:'base64'});
+  let msg='Report downloaded.';
+  if(site.email){
+    const {error}=await sb.functions.invoke('send-report',{body:{to:site.email,subject:`Round report - ${site.name} - ${new Date().toLocaleString()} (${me.email})`,filename,file}});
+    msg=error?'Report downloaded, but email failed: '+error.message:'Report emailed to '+site.email;
+  }
+  await sb.from('rounds').update({status:'done',finished_at:new Date().toISOString()}).eq('id',round.id);
+  app.innerHTML=`<div class="card"><h3>Round complete ✓</h3><p>${esc(msg)}</p><button onclick="home()">Done</button></div>`;
+}
+
+/* ---------- ADMIN ---------- */
+function adminView(){
+  $('#ttl').textContent='Admin';
+  if(!adm.site){
+    app.innerHTML=`<h3>Sites</h3>`+S.sites.map(s=>`<div class="room" onclick="adm={site:'${s.id}'};adminView()"><span>${esc(s.name)}<br><small>${esc(s.email||'no email')}</small></span><span>›</span></div>`).join('')+
+    `<div class="card"><label>New site name</label><input id="n"><label>Report email(s), comma separated</label><input id="e" type="email" multiple><button onclick="add('sites',{name:n.value,email:e.value})">Add site</button></div>`;
+  } else if(!adm.room){
+    const s=S.sites.find(x=>x.id===adm.site);
+    app.innerHTML=`<button class="g" onclick="adm={};adminView()">← Sites</button><h3>${esc(s.name)}</h3>
+    <div class="card"><label>Report email(s)</label><input id="e" value="${esc(s.email)}"><button onclick="upd('sites','${s.id}',{email:e.value})">Save emails</button> <button class="r" onclick="del('sites','${s.id}')">Delete site</button></div><h3>Rooms</h3>`+
+    S.rooms.filter(r=>r.site_id===s.id).map(r=>`<div class="room" onclick="adm.room='${r.id}';adminView()"><span>${esc(r.name)}</span><span>›</span></div>`).join('')+
+    `<div class="card"><label>New room (e.g. Utility A)</label><input id="n"><button onclick="add('rooms',{site_id:'${s.id}',name:n.value})">Add room</button></div>`;
+  } else {
+    const r=S.rooms.find(x=>x.id===adm.room);
+    app.innerHTML=`<button class="g" onclick="adm.room=null;adminView()">← Rooms</button><h3>${esc(r.name)}</h3>`+
+    S.panels.filter(p=>p.room_id===r.id).map(p=>`<div class="card"><b>${esc(p.name)}</b><br><small>${esc(p.fields.join(' · '))}</small><br><br><button class="r" onclick="del('panels','${p.id}')">Delete</button></div>`).join('')+
+    `<div class="card"><label>New panel (e.g. MDB A)</label><input id="n"><label>Readings, comma separated</label><input id="f" value="Voltage (V), Current (A), Power (kW)"><button onclick="addPanel('${r.id}')">Add panel</button></div>
+    <button class="r" onclick="del('rooms','${r.id}')">Delete room</button>`;
+  }
+}
+async function add(t,o){if(!o.name.trim())return;const {error}=await sb.from(t).insert(o);if(error)alert(error.message);await load();adminView()}
+async function upd(t,id,o){const {error}=await sb.from(t).update(o).eq('id',id);alert(error?error.message:'Saved');await load()}
+async function del(t,id){if(!confirm('Delete? This also removes related data.'))return;await sb.from(t).delete().eq('id',id);if(t==='sites')adm={};if(t==='rooms')adm.room=null;await load();adminView()}
+function addPanel(room_id){const fields=$('#f').value.split(',').map(s=>s.trim()).filter(Boolean);add('panels',{room_id,name:$('#n').value,fields})}
+
+init();
+</script></body></html>
