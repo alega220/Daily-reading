@@ -2,48 +2,55 @@
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f2a4a">
+<meta name="theme-color" content="#0b2545">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
 <title>DC Rounds</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
-:root{--bg:#f3f6fb;--card:#fff;--tx:#14202e;--mu:#667585;--bd:#e2e8f0;--pr:#2563eb;--ok:#16a34a;--rd:#dc2626;--hd:#0f2a4a;--in:#f8fafc;--sh:0 1px 2px #0000000f,0 6px 18px #0000000d}
-@media(prefers-color-scheme:dark){:root{--bg:#0c1522;--card:#152234;--tx:#e8eef6;--mu:#94a3b8;--bd:#24354b;--pr:#3b82f6;--hd:#09111c;--in:#0f1b2b;--sh:0 1px 2px #0006}}
+:root{--bg:#f4f6fb;--card:#fff;--tx:#0f1b2d;--mu:#64748b;--bd:#e5eaf2;--pr:#2563eb;--pr2:#4f46e5;--ok:#16a34a;--rd:#dc2626;--hd:#0b2545;--hd2:#14407a;--in:#f7f9fc;--sh:0 1px 2px #0f1b2d0d,0 8px 24px #0f1b2d0f;--r:18px}
+@media(prefers-color-scheme:dark){:root{--bg:#0a111d;--card:#131e31;--tx:#e8eef7;--mu:#93a3ba;--bd:#233248;--pr:#3b82f6;--pr2:#6366f1;--hd:#070d17;--hd2:#0f2a52;--in:#0e1829;--sh:0 1px 2px #0008,0 8px 24px #0005}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{font-size:18px}
-body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);line-height:1.4}
-header{background:var(--hd);color:#fff;padding:.7rem 1rem;display:flex;gap:.5rem;align-items:center;position:sticky;top:0;z-index:5;padding-top:calc(.7rem + env(safe-area-inset-top,0px))}
-header b{flex:1;font-size:1.1rem;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header button{background:#ffffff22;color:#fff;padding:.4rem .7rem;font-size:.85rem}
-main{max-width:680px;margin:auto;padding:1rem 1rem 5rem}
-h2{font-size:1.25rem;margin:.4rem 0 .8rem}
-.card{background:var(--card);border-radius:16px;padding:1rem;margin-bottom:.9rem;box-shadow:var(--sh);border:1px solid var(--bd)}
-button{font:inherit;font-weight:600;font-size:.95rem;padding:.75rem 1.1rem;border:0;border-radius:12px;background:var(--pr);color:#fff;cursor:pointer;transition:transform .08s,opacity .15s}
-button:active{transform:scale(.97)}button.g{background:var(--in);color:var(--tx);border:1px solid var(--bd)}
-button.r{background:var(--rd)}button.ok{background:var(--ok)}button.sm{padding:.45rem .8rem;font-size:.85rem}button.full{width:100%}
-input,select,textarea{font:inherit;font-size:1rem;width:100%;padding:.75rem .85rem;border:1.5px solid var(--bd);border-radius:12px;margin:.25rem 0 .8rem;background:var(--in);color:var(--tx)}
-input:focus,select:focus,textarea:focus{outline:0;border-color:var(--pr);box-shadow:0 0 0 3px #2563eb33}
-label{font-size:.8rem;font-weight:600;color:var(--mu);text-transform:uppercase;letter-spacing:.03em}
-.item{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:1rem;margin-bottom:.6rem;background:var(--card);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh);cursor:pointer}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);line-height:1.45;-webkit-font-smoothing:antialiased}
+header{background:linear-gradient(135deg,var(--hd),var(--hd2));color:#fff;padding:.75rem 1rem;display:flex;gap:.5rem;align-items:center;position:sticky;top:0;z-index:5;padding-top:calc(.75rem + env(safe-area-inset-top,0px));box-shadow:0 4px 18px #0b25454d}
+header b{flex:1;font-size:1.1rem;font-weight:700;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:#ffffff26;color:#fff;padding:.4rem .75rem;font-size:.85rem;border-radius:99px;backdrop-filter:blur(6px)}
+main{max-width:680px;margin:auto;padding:1.1rem 1rem 6rem}
+h2{font-size:1.3rem;margin:.4rem 0 .9rem;letter-spacing:-.015em}
+.card{background:var(--card);border-radius:var(--r);padding:1.1rem;margin-bottom:.9rem;box-shadow:var(--sh);border:1px solid var(--bd)}
+button{font:inherit;font-weight:600;font-size:.95rem;padding:.78rem 1.15rem;border:0;border-radius:14px;background:linear-gradient(135deg,var(--pr),var(--pr2));color:#fff;cursor:pointer;transition:transform .08s,opacity .15s,box-shadow .15s;box-shadow:0 4px 12px #2563eb33}
+button:active{transform:scale(.97)}button:disabled{opacity:.55;cursor:default}
+button.g{background:var(--in);color:var(--tx);border:1px solid var(--bd);box-shadow:none}
+button.r{background:var(--rd);box-shadow:0 4px 12px #dc262633}button.ok{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 4px 12px #16a34a33}button.sm{padding:.45rem .85rem;font-size:.85rem;border-radius:12px}button.full{width:100%}
+input,select,textarea{font:inherit;font-size:1rem;width:100%;padding:.78rem .9rem;border:1.5px solid var(--bd);border-radius:14px;margin:.25rem 0 .8rem;background:var(--in);color:var(--tx);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--pr);box-shadow:0 0 0 4px #2563eb2b}
+input[type=number]{-moz-appearance:textfield}
+label{font-size:.74rem;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.item{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:1rem 1.1rem;margin-bottom:.65rem;background:var(--card);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--sh);cursor:pointer;transition:transform .1s}
+.item:active{transform:scale(.985)}
 .item.done{border-left:6px solid var(--ok)}.item small{display:block}
-.item .ch{color:var(--mu);font-size:1.4rem;line-height:1}
+.item .ch{color:var(--mu);font-size:1.5rem;line-height:1}
 small,.mu{color:var(--mu);font-size:.85rem}
-.chip{display:inline-block;padding:.15rem .65rem;border-radius:99px;font-size:.78rem;font-weight:650}
+.chip{display:inline-block;padding:.2rem .7rem;border-radius:99px;font-size:.75rem;font-weight:700;white-space:nowrap}
 .c-due{background:#fef3c7;color:#92400e}.c-ok{background:#dcfce7;color:#166534}.c-al{background:#fee2e2;color:#991b1b}
+@media(prefers-color-scheme:dark){.c-due{background:#4a3a0f;color:#fcd34d}.c-ok{background:#12391f;color:#86efac}.c-al{background:#4a1616;color:#fca5a5}}
 .row2{display:flex;gap:.6rem}.row2>button{flex:1}
 .top{display:flex;justify-content:space-between;align-items:center;gap:.6rem;margin-bottom:.8rem}
-.prog{height:8px;background:var(--bd);border-radius:9px;overflow:hidden;margin:.3rem 0 1rem}.prog i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.prog{height:10px;background:var(--bd);border-radius:9px;overflow:hidden;margin:.3rem 0 1.1rem}.prog i{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:9px;transition:width .35s}
 .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0 .7rem}
-.card.alarm{border-color:var(--rd);box-shadow:0 0 0 2px #dc262633}
-.bottom{position:sticky;bottom:0;padding:.8rem 0;background:linear-gradient(#0000,var(--bg) 35%)}
-.ov{position:fixed;inset:0;background:#0009;z-index:20;display:flex;align-items:flex-end;justify-content:center}
-.sh{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom,0px));animation:up .2s ease-out}
-.sh{max-height:92vh;overflow:auto}.sh h3{margin:.1rem 0 1rem;font-size:1.2rem}
+.card.alarm{border-color:var(--rd);box-shadow:0 0 0 3px #dc262633}
+.bottom{position:sticky;bottom:calc(64px + env(safe-area-inset-bottom,0px));padding:.8rem 0;background:linear-gradient(#0000,var(--bg) 35%)}
+.ov{position:fixed;inset:0;background:#0b1220a6;backdrop-filter:blur(3px);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sh{background:var(--card);width:100%;max-width:560px;border-radius:26px 26px 0 0;padding:1.3rem 1.3rem calc(1.3rem + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+.sh{max-height:92vh;overflow:auto}.sh h3{margin:.1rem 0 1rem;font-size:1.2rem;letter-spacing:-.01em}
 @keyframes up{from{transform:translateY(40px);opacity:0}}
-.nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:8}
-.nav button{flex:1;background:none;color:var(--mu);border-radius:0;display:flex;flex-direction:column;align-items:center;gap:.05rem;font-size:.75rem;padding:.55rem 0}
+.nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:color-mix(in srgb,var(--card) 88%,transparent);backdrop-filter:blur(14px);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:8}
+.nav button{flex:1;background:none;box-shadow:none;color:var(--mu);border-radius:0;display:flex;flex-direction:column;align-items:center;gap:.05rem;font-size:.75rem;padding:.6rem 0}
 .nav button span{font-size:1.3rem}.nav button.on{color:var(--pr)}
-.empty{text-align:center;color:var(--mu);padding:2rem 1rem}
+.empty{text-align:center;color:var(--mu);padding:2.5rem 1rem}
+.login{margin-top:10vh;text-align:center}.login .logo{font-size:2.6rem;margin-bottom:.2rem}.login h2{margin-top:0}.login form{text-align:left}
 </style></head><body>
 <header><b id="ttl">DC Rounds</b><span id="hb" style="display:flex;gap:.4rem"></span></header>
 <main id="app">Loading…</main>
@@ -55,7 +62,7 @@ const ROUND_HOURS=2;
 // ==================
 const sb=supabase.createClient(SB_URL,SB_KEY);
 const $=s=>document.querySelector(s), app=$('#app');
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let me=null,isAdmin=false,adminMode=false,S={sites:[],rooms:[],panels:[]},site=null,round=null,adm={};
 
 /* text size */
@@ -70,12 +77,15 @@ function sheet(title,body,ok){
   document.body.appendChild(d);
   d.querySelector('#x').onclick=()=>d.remove();
   d.onclick=e=>{if(e.target===d)d.remove()};
-  d.querySelector('#o').onclick=async()=>{if(await ok(d)!==false)d.remove()};
+  d.querySelector('#o').onclick=async e=>{const b=e.currentTarget;if(b.disabled)return;b.disabled=true;let r;try{r=await ok(d)}catch(x){alert(x.message);r=false}b.disabled=false;if(r!==false)d.remove()};
   const f=d.querySelector('input');if(f)f.focus();
 }
 const val=(d,n)=>d.querySelector(`[name=${n}]`).value.trim();
 
 async function init(){
+  try{ await init0() }catch(e){ app.innerHTML=`<div class="card login"><div class="logo">⚠️</div><h2>Can't load</h2><p class="mu">${esc(e.message||e)}<br>Check your connection and try again.</p><button class="full" onclick="location.reload()">Reload</button></div>` }
+}
+async function init0(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session) return loginView();
   me=session.user;
@@ -85,6 +95,7 @@ async function init(){
 }
 async function load(){
   const [s,r,p]=await Promise.all([sb.from('sites').select('*').order('name'),sb.from('rooms').select('*').order('name'),sb.from('panels').select('*').order('name')]);
+  const er=s.error||r.error||p.error; if(er) throw new Error(er.message);
   S={sites:s.data||[],rooms:r.data||[],panels:p.data||[]};
 }
 function head(){
@@ -94,11 +105,12 @@ function head(){
 function loginView(){
   $('#nav').style.display='none';
   $('#hb').innerHTML=`<button onclick="setFs(-1)">A−</button><button onclick="setFs(1)">A+</button>`;
-  app.innerHTML=`<div class="card" style="margin-top:12vh"><h2>Sign in</h2><label>Email</label><input id="em" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"><label>Password</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="none"><label style="text-transform:none;display:flex;gap:.5rem;align-items:center;margin-bottom:1rem"><input type="checkbox" style="width:auto;margin:0" onchange="$('#pw').type=this.checked?'text':'password'"> Show password</label><button class="full" onclick="login()">Sign in</button><p id="err" style="color:var(--rd)"></p></div>`;
+  app.innerHTML=`<div class="card login"><div class="logo">🏢</div><h2>DC Rounds</h2><p class="mu" style="margin-top:-.5rem">Sign in to start your walk</p><form onsubmit="login();return false"><label>Email</label><input id="em" type="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required><label>Password</label><input id="pw" type="password" autocomplete="current-password" autocapitalize="none" required><label style="text-transform:none;letter-spacing:0;font-size:.85rem;display:flex;gap:.5rem;align-items:center;margin-bottom:1rem"><input type="checkbox" style="width:auto;margin:0" onchange="$('#pw').type=this.checked?'text':'password'"> Show password</label><button class="full" id="lb" type="submit">Sign in</button><p id="err" style="color:var(--rd);margin-bottom:0"></p></form></div>`;
 }
 async function login(){
+  const b=$('#lb');b.disabled=true;b.textContent='Signing in…';
   const {error}=await sb.auth.signInWithPassword({email:$('#em').value.trim().toLowerCase(),password:$('#pw').value});
-  if(error) $('#err').textContent=error.message; else init();
+  if(error){$('#err').textContent=error.message;b.disabled=false;b.textContent='Sign in'} else init();
 }
 
 /* ---------- NAV ---------- */
